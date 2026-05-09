@@ -164,7 +164,7 @@ export default function DashboardPage() {
             
             <div className="space-y-1">
               <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Welcome Back,</p>
-              <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-foreground drop-shadow-md flex items-baseline gap-3">
+              <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-foreground drop-shadow-md flex items-baseline gap-3 break-words whitespace-pre-wrap">
                 {data.name}
                 {data.clan_name && (
                   <span className="text-lg font-bold text-primary opacity-80">[{data.clan_name}]</span>

@@ -29,9 +29,9 @@ export default function ProtectedLayout({
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row">
+    <div className="min-h-[100dvh] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] bg-background text-foreground flex flex-col md:flex-row">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-border bg-card/50 backdrop-blur-md h-screen sticky top-0">
+      <aside className="hidden md:flex flex-col w-64 border-r border-border bg-card/50 backdrop-blur-md h-[100dvh] sticky top-0">
         <div className="p-6">
           <h1 className="text-2xl font-black uppercase tracking-tighter text-primary drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]">
             KaamKaaj
