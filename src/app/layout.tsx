@@ -16,6 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "KaamKaaj | RPG Dashboard",
   description: "A hardcore accountability RPG where users create Lakshyas, complete Kaams, and earn XP.",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
