@@ -1,7 +1,12 @@
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Target, Trophy, Clock } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Target, Trophy, Clock, Trash2, Loader2 } from 'lucide-react';
 import { KaamCard } from './KaamCard';
 import { KaamModal } from './KaamModal';
+import { deleteLakshya } from '@/services/lakshyaService';
 
 interface DashboardKaamResponse {
   id: number;
@@ -24,9 +29,21 @@ interface DashboardLakshyaResponse {
 }
 
 export function LakshyaCard({ lakshya }: { lakshya: DashboardLakshyaResponse }) {
+  const queryClient = useQueryClient();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  
   const totalKaams = lakshya.kaams.length;
   const completedKaams = lakshya.kaams.filter(k => k.status === 'completed').length;
   const progress = totalKaams === 0 ? 0 : Math.round((completedKaams / totalKaams) * 100);
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteLakshya(lakshya.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['lakshyas'] });
+      setDeleteOpen(false);
+    },
+  });
 
   return (
     <Accordion className="w-full">
@@ -44,6 +61,49 @@ export function LakshyaCard({ lakshya }: { lakshya: DashboardLakshyaResponse }) 
               </h3>
               {lakshya.description && (
                 <p className="text-sm text-muted-foreground line-clamp-1">{lakshya.description}</p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {!lakshya.is_accomplished && (
+                <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteOpen(true);
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Delete Lakshya</DialogTitle>
+                      <DialogDescription>
+                        Are you sure you want to delete "{lakshya.title}"? This action cannot be undone and all associated kaams will also be removed.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => deleteMutation.mutate()}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {deleteMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                        Delete
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               )}
             </div>
 

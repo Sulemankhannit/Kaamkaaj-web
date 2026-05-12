@@ -41,8 +41,12 @@ export function LakshyaModal() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button className="w-full sm:w-auto font-black uppercase tracking-wider gap-2 shadow-[0_0_15px_rgba(255,215,0,0.3)]">
-            <Plus className="w-5 h-5" /> Banao Lakshya
+          <Button 
+            className="fixed bottom-24 right-4 z-[9999] h-14 w-14 rounded-full p-0 shadow-[0_0_20px_rgba(255,215,0,0.4)] border-2 border-primary/20 flex items-center justify-center md:static md:h-8 md:w-auto md:rounded-lg md:px-2.5 md:py-0 font-black uppercase tracking-wider md:gap-2 transition-transform active:scale-95"
+            style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+          >
+            <Plus className="w-6 h-6 md:w-5 md:h-5" />
+            <span className="hidden md:inline">Banao Lakshya</span>
           </Button>
         }
       />

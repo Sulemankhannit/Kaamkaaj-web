@@ -34,6 +34,12 @@ interface DashboardResponse {
   name: string;
   level: number;
   current_xp: number;
+  xp_debt: number;
+  in_shadow_realm: boolean;
+  shadow_realm_message: string | null;
+  net_xp: number;
+  xp_to_next_level: number;
+  current_streak: number;
   clan_name?: string | null;
   bio?: string | null;
   lakshyas: DashboardLakshyaResponse[];
@@ -147,29 +153,68 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Shadow Realm Alert */}
+      {data.in_shadow_realm && (
+        <div className="p-4 rounded-xl bg-destructive/20 border-2 border-destructive shadow-[0_0_20px_rgba(220,20,60,0.3)] animate-pulse">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-destructive/40 flex items-center justify-center">
+              <span className="text-2xl">👁</span>
+            </div>
+            <div>
+              <h3 className="font-black uppercase tracking-widest text-destructive">You Have Entered The Shadow Realm</h3>
+              {data.shadow_realm_message && (
+                <p className="text-sm text-destructive/80 mt-1">{data.shadow_realm_message}</p>
+              )}
+              {data.xp_debt > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">XP Debt: {data.xp_debt} — Complete tasks to escape!</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Character Header Component */}
-      <section className="relative p-6 md:p-8 rounded-3xl bg-card/40 backdrop-blur-xl border border-border overflow-hidden shadow-2xl">
+      <section className={`relative p-6 md:p-8 rounded-3xl backdrop-blur-xl border overflow-hidden shadow-2xl ${
+        data.in_shadow_realm ? 'bg-destructive/10 border-destructive/50' : 'bg-card/40 border-border'
+      }`}>
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[80px] pointer-events-none" />
         
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-8">
           <div className="flex items-center gap-6">
             <div className="relative">
-              <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-secondary border-2 border-primary/50 flex items-center justify-center shadow-[0_0_15px_rgba(255,215,0,0.3)]">
-                <User className="w-10 h-10 md:w-12 md:h-12 text-primary" />
+              <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full border-2 flex items-center justify-center shadow-[0_0_15px_rgba(255,215,0,0.3)] ${
+                data.in_shadow_realm ? 'bg-destructive/20 border-destructive' : 'bg-secondary border-primary/50'
+              }`}>
+                {data.in_shadow_realm ? (
+                  <span className="text-4xl">👁</span>
+                ) : (
+                  <User className="w-10 h-10 md:w-12 md:h-12 text-primary" />
+                )}
               </div>
-              <div className="absolute -bottom-2 -right-2 bg-background border border-primary px-2 py-0.5 rounded text-xs font-black text-primary uppercase shadow-[0_0_10px_rgba(255,215,0,0.4)]">
-                LVL {data.level}
+              <div className={`absolute -bottom-2 -right-2 px-2 py-0.5 rounded text-xs font-black uppercase shadow-[0_0_10px_rgba(255,215,0,0.4)] ${
+                data.in_shadow_realm ? 'bg-destructive text-white border border-destructive' : 'bg-background text-primary border border-primary/50'
+              }`}>
+                {data.in_shadow_realm ? 'DISHONORED' : `LVL ${data.level}`}
               </div>
             </div>
             
-            <div className="space-y-1">
+            <div className="space-y-1 min-w-0 flex-1">
               <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Welcome Back,</p>
-              <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-foreground drop-shadow-md flex items-baseline gap-3 break-words whitespace-pre-wrap">
-                {data.name}
-                {data.clan_name && (
-                  <span className="text-lg font-bold text-primary opacity-80">[{data.clan_name}]</span>
+              <div className="flex items-center flex-wrap gap-3">
+                <h2 className="text-xl sm:text-2xl md:text-4xl font-black uppercase tracking-tighter text-foreground drop-shadow-md flex flex-wrap items-baseline gap-x-3 gap-y-0 break-words whitespace-pre-wrap leading-tight">
+                  {data.name}
+                  {data.clan_name && (
+                    <span className="text-lg font-bold text-primary opacity-80">[{data.clan_name}]</span>
+                  )}
+                </h2>
+                {data.current_streak > 0 && (
+                  <div className="flex items-center gap-1 bg-orange-500/20 px-3 py-1 rounded-full border border-orange-500/40">
+                    <span className="text-lg">🔥</span>
+                    <span className="font-black text-orange-400 text-sm">{data.current_streak}</span>
+                    <span className="text-xs text-orange-400/60 ml-1">STREAK</span>
+                  </div>
                 )}
-              </h2>
+              </div>
               {data.bio && (
                 <p className="text-sm text-muted-foreground italic max-w-md line-clamp-2 mt-2 border-l-2 border-primary/50 pl-3">
                   "{data.bio}"
@@ -179,7 +224,13 @@ export default function DashboardPage() {
           </div>
 
           <div className="w-full lg:max-w-md lg:pb-2">
-            <XPBar currentXP={data.current_xp} level={data.level} />
+            <XPBar 
+              currentXP={data.current_xp} 
+              level={data.level}
+              xpDebt={data.xp_debt}
+              inShadowRealm={data.in_shadow_realm}
+              xpToNextLevel={data.xp_to_next_level}
+            />
           </div>
         </div>
       </section>

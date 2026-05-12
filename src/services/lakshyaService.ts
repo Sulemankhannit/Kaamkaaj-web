@@ -17,3 +17,8 @@ export const createLakshya = async (data: LakshyaCreatePayload) => {
   const response = await api.post('/khiladi/me/lakshyaBanao', data);
   return response.data;
 };
+
+export const deleteLakshya = async (lakshyaId: number) => {
+  const response = await api.delete(`/khiladi/me/${lakshyaId}/deleteLakshya`);
+  return response.data;
+};

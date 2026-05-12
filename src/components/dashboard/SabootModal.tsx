@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { submitSaboot } from '@/services/kaamService';
+import imageCompression from 'browser-image-compression';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,6 +19,7 @@ export function SabootModal({ kaamId, kaamTitle }: SabootModalProps) {
   const [sabootText, setSabootText] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Ceremony State
@@ -27,41 +29,57 @@ export function SabootModal({ kaamId, kaamTitle }: SabootModalProps) {
 
   const queryClient = useQueryClient();
 
+  const compressionOptions = {
+    maxSizeMB: 1,
+    maxWidthOrHeight: 1920,
+    useWebWorker: true,
+  };
+
   const mutation = useMutation({
     mutationFn: (formData: FormData) => submitSaboot(kaamId, formData),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      
-      // If the backend completes or rejects it immediately
+
       if (data.status === 'completed' || data.status === 'rejected') {
         setCeremonyStatus(data.status);
         setAiFeedback(data.ai_feedback || '');
         setCeremonyOpen(true);
-        setOpen(false); // Close the submit modal
+        setOpen(false);
       } else {
-        // If it's just 'in_review' or 'pending', close normally. 
-        // We could also show a toast here.
         setOpen(false);
       }
-      
-      // Reset form
+
       setSabootText('');
       setSelectedFile(null);
       setPreviewUrl(null);
     },
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
+
+      setIsCompressing(true);
+      try {
+        const compressedFile = await imageCompression(file, compressionOptions);
+        setSelectedFile(compressedFile);
+      } catch (error) {
+        console.error('Image compression failed:', error);
+        setSelectedFile(file);
+      } finally {
+        setIsCompressing(false);
+      }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!sabootText && !selectedFile) return;
+
+    if (isCompressing) {
+      return;
+    }
 
     const formData = new FormData();
     if (sabootText) formData.append('saboot_text', sabootText);
@@ -108,7 +126,14 @@ export function SabootModal({ kaamId, kaamTitle }: SabootModalProps) {
                 className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer ${previewUrl ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-primary/5'}`}
                 onClick={() => fileInputRef.current?.click()}
               >
-                {previewUrl ? (
+                {isCompressing ? (
+                  <div className="text-center py-6 flex flex-col items-center gap-2">
+                    <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center animate-pulse">
+                      <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <span className="text-sm font-bold text-muted-foreground">Compressing image...</span>
+                  </div>
+                ) : previewUrl ? (
                   <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black/20">
                     <img src={previewUrl} alt="Preview" className="w-full h-full object-contain" />
                   </div>
@@ -141,7 +166,7 @@ export function SabootModal({ kaamId, kaamTitle }: SabootModalProps) {
               <Button 
                 type="submit" 
                 className="w-full font-black uppercase tracking-widest gap-2" 
-                disabled={mutation.isPending || (!sabootText && !selectedFile)}
+                disabled={mutation.isPending || isCompressing || (!sabootText && !selectedFile)}
               >
                 {mutation.isPending ? 'Submitting...' : 'Offer Saboot'}
               </Button>
