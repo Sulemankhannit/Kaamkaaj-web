@@ -71,12 +71,26 @@ export default function VerifyOtpPage() {
     }
   };
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (z.string().email().safeParse(emailInput).success) {
-      setRegistrationEmail(emailInput);
-    } else {
+    setError(null);
+    if (!z.string().email().safeParse(emailInput).success) {
       setError('Please enter a valid email address.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await api.post('/khiladi/resendOtp/', {
+        email: emailInput,
+      });
+      setRegistrationEmail(emailInput);
+      setCooldown(60);
+    } catch (err: any) {
+      const detail = err.response?.data?.detail;
+      setError(typeof detail === 'string' ? detail : 'Failed to send OTP. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -110,8 +124,19 @@ export default function VerifyOtpPage() {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full font-bold uppercase tracking-wider text-primary-foreground bg-primary hover:bg-primary/90">
-                Proceed to OTP
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full font-bold uppercase tracking-wider text-primary-foreground bg-primary hover:bg-primary/90"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending OTP...
+                  </>
+                ) : (
+                  'Proceed to OTP'
+                )}
               </Button>
             </form>
           </CardContent>
