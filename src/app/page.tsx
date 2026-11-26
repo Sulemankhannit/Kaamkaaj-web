@@ -1,454 +1,648 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { 
-  Target, 
-  Zap, 
-  Trophy, 
-  Users, 
-  ChevronRight, 
-  Star, 
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import {
+  Target,
+  Zap,
+  Users,
+  ChevronRight,
   Shield,
   Flame,
-  Crown,
-  Rocket,
-  LucideIcon,
+  Camera,
   Brain,
-  MessageSquare,
-  Sparkles
+  CheckCircle2,
+  XCircle,
+  Skull,
+  Lock,
+  ArrowRight,
+  Scale,
 } from 'lucide-react';
 
-const features = [
-  {
-    icon: Brain,
-    title: 'AI Game Master',
-    description: 'Your work gets reviewed by an intelligent Game Master. Get personalized feedback and level up your skills.',
-    color: 'text-chart-3'
+type VerdictKey = 'blessed' | 'rejected' | 'shadow';
+
+interface VerdictScenario {
+  key: VerdictKey;
+  tabLabel: string;
+  kaamTitle: string;
+  stakes: string;
+  proofLabel: string;
+  verdictTitle: string;
+  verdictCode: string;
+  feedback: string;
+  xpDelta: string;
+  streakState: string;
+  accentClass: string;
+  borderClass: string;
+  bgTintClass: string;
+}
+
+const VERDICT_SCENARIOS: Record<VerdictKey, VerdictScenario> = {
+  blessed: {
+    key: 'blessed',
+    tabLabel: 'Approved',
+    kaamTitle: 'System Design Notes — 2 Pages',
+    stakes: 'High-Priority · Saboot Required',
+    proofLabel: 'Photo submitted (412 KB)',
+    verdictTitle: 'BLESSED',
+    verdictCode: 'VERIFIED',
+    feedback:
+      'Clear handwritten diagrams covering load balancing and cache invalidation. Effort matches the stakes. XP granted.',
+    xpDelta: '+250 XP',
+    streakState: 'Streak +1',
+    accentClass: 'text-[#39ff14]',
+    borderClass: 'border-[#39ff14]/40',
+    bgTintClass: 'bg-[#39ff14]/10',
   },
+  rejected: {
+    key: 'rejected',
+    tabLabel: 'Rejected',
+    kaamTitle: '45-Min Strength Session',
+    stakes: 'High-Priority · Saboot Required',
+    proofLabel: 'Photo submitted (388 KB)',
+    verdictTitle: 'REJECTED',
+    verdictCode: 'INSUFFICIENT PROOF',
+    feedback:
+      'The timer in your photo reads 14 minutes, not 45. Complete the full session and submit accurate evidence.',
+    xpDelta: '0 XP',
+    streakState: 'Streak at risk',
+    accentClass: 'text-[#dc143c]',
+    borderClass: 'border-[#dc143c]/40',
+    bgTintClass: 'bg-[#dc143c]/10',
+  },
+  shadow: {
+    key: 'shadow',
+    tabLabel: 'Missed Day',
+    kaamTitle: 'Daily Algorithm Practice',
+    stakes: 'Deadline Passed · Reaper Triggered',
+    proofLabel: 'No Saboot submitted before cutoff',
+    verdictTitle: 'SHADOW REALM',
+    verdictCode: 'XP DEBT ACTIVE',
+    feedback:
+      'You missed a full day without a Streak Freeze. Your streak is broken and XP has dropped negative. Grind verified Kaams to return.',
+    xpDelta: '-150 XP Debt',
+    streakState: 'Streak reset to 0',
+    accentClass: 'text-[#dc143c]',
+    borderClass: 'border-[#dc143c]/40',
+    bgTintClass: 'bg-[#dc143c]/10',
+  },
+};
+
+const CORE_LOOP = [
   {
     icon: Target,
-    title: 'Set Your Lakshyas',
-    description: 'Define big goals and break them into conquerable Kaams. Your quest log awaits.',
-    color: 'text-primary'
+    title: 'Forge a Lakshya',
+    description:
+      'Define a concrete long-term quest—like shipping a project, mastering a subject, or training consistently.',
+    accent: 'text-primary',
   },
   {
     icon: Zap,
-    title: 'Earn XP & Level Up',
-    description: 'Complete tasks to gain experience. Rise through the ranks from Novice to Legend.',
-    color: 'text-success'
+    title: 'Assign Kaams & Stakes',
+    description:
+      'Break your Lakshya into daily tasks. Set your own XP reward and mark high-stakes Kaams as requiring verification.',
+    accent: 'text-primary',
   },
   {
-    icon: Users,
-    title: 'Join or Create Clans',
-    description: 'Team up with fellow Khiladis. Together, no quest is impossible.',
-    color: 'text-chart-4'
-  }
-];
-
-const stats = [
-  { value: '1M+', label: 'Khiladis', icon: Users },
-  { value: '10M+', label: 'Kaams Completed', icon: Zap },
-  { value: '500K+', label: 'Lakshyas Achieved', icon: Target }
-];
-
-const testimonials = [
-  {
-    name: 'Shadow_Ninja',
-    level: 'Level 47',
-    quote: 'KaamKaaj transformed my life. I went from chaos to clarity. My productivity skyrocketed!',
-    achievement: 'Completed 500+ Kaams'
+    icon: Camera,
+    title: 'Submit Saboot',
+    description:
+      'Upload a photo of your actual work—compressed automatically on your device before it reaches the Game Master.',
+    accent: 'text-[#39ff14]',
   },
   {
-    name: 'TechWarrior',
-    level: 'Level 89',
-    quote: 'The gamification is addictive. I actually look forward to completing my daily tasks now.',
-    achievement: 'Reached Legend Rank'
+    icon: Brain,
+    title: 'Face the Verdict',
+    description:
+      'The AI Game Master inspects your proof against your task criteria and awards XP—or sends you back to try again.',
+    accent: 'text-[#dc143c]',
   },
-  {
-    name: 'GoalGetter_99',
-    level: 'Level 156',
-    quote: 'Lost 30 pounds by turning my fitness journey into a game. Every workout gave me XP!',
-    achievement: '3 Clans Founded'
-  }
 ];
 
-function AnimatedBackground() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-[100px] animate-pulse" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-success/5 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
-      <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-destructive/5 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: '2s' }} />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,var(--background)_70%)]" />
-    </div>
-  );
-}
-
-function FloatingIcon({ icon: Icon, delay, left, top }: { icon: LucideIcon, delay: number, left: string, top: string }) {
-  const [visible, setVisible] = useState(false);
-  
-  useEffect(() => {
-    const timer = setTimeout(() => setVisible(true), delay);
-    return () => clearTimeout(timer);
-  }, [delay]);
-
-  return (
-    <div 
-      className={`absolute transition-all duration-1000 ${visible ? 'opacity-30 translate-y-0' : 'opacity-0 translate-y-10'}`}
-      style={{ left, top }}
-    >
-      <Icon className="w-6 h-6 text-primary animate-bounce" style={{ animationDuration: '3s' }} />
-    </div>
-  );
-}
+const PROTOCOL_PILLARS = [
+  {
+    value: 'Photo Proof',
+    label: 'Mandatory Saboot on verified Kaams—no honor-system checkboxes.',
+    icon: Camera,
+  },
+  {
+    value: 'AI Judgment',
+    label: 'Personalized Game Master feedback shaped by your streak and history.',
+    icon: Brain,
+  },
+  {
+    value: 'XP Debt',
+    label: 'Miss a full day and enter the Shadow Realm until you earn your way out.',
+    icon: Scale,
+  },
+];
 
 export default function LandingPage() {
-  const [mounted] = useState(true);
+  const [activeVerdict, setActiveVerdict] = useState<VerdictKey>('blessed');
+  const shouldReduceMotion = useReducedMotion();
+  const scenario = VERDICT_SCENARIOS[activeVerdict];
 
   return (
-    <div className="min-h-screen bg-background relative">
-      <AnimatedBackground />
-      
-      <FloatingIcon icon={Star} delay={0} left="10%" top="20%" />
-      <FloatingIcon icon={Flame} delay={200} left="85%" top="15%" />
-      <FloatingIcon icon={Crown} delay={400} left="75%" top="60%" />
-      <FloatingIcon icon={Shield} delay={600} left="5%" top="70%" />
-      <FloatingIcon icon={Rocket} delay={800} left="90%" top="80%" />
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Top Navigation */}
+      <header className="sticky top-0 z-40 border-b border-border/80 bg-background/90 backdrop-blur-md">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/40 flex items-center justify-center">
+              <Target className="w-4 h-4 text-primary" />
+            </div>
+            <span className="font-display text-xl font-bold uppercase tracking-wider text-foreground">
+              KaamKaaj
+            </span>
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
+            <a href="#loop" className="hover:text-foreground transition-colors">
+              Core Loop
+            </a>
+            <a href="#game-master" className="hover:text-foreground transition-colors">
+              Game Master
+            </a>
+            <a href="#stakes" className="hover:text-foreground transition-colors">
+              Stakes &amp; Penalties
+            </a>
+          </nav>
+
+          <div className="flex items-center gap-3">
+            <Link
+              href="/login"
+              className="px-3.5 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Login
+            </Link>
+            <Link
+              href="/register"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-bold uppercase tracking-wider transition-colors"
+            >
+              Start Quest
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </header>
 
       {/* Hero Section */}
-      <section className="relative pt-20 pb-32 px-4">
-        <div className={`max-w-6xl mx-auto text-center transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border mb-8">
-            <Zap className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-muted-foreground">Level Up Your Life</span>
+      <section className="relative pt-14 pb-20 md:pt-20 md:pb-28 px-4 sm:px-6 border-b border-border">
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+          {/* Left: Thesis & Actions */}
+          <div className="lg:col-span-6 space-y-6">
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold uppercase tracking-tight leading-[1.04] text-foreground">
+              To-do lists let you lie.{' '}
+              <span className="text-primary">KaamKaaj demands proof.</span>
+            </h1>
+
+            <p className="text-lg text-muted-foreground max-w-xl leading-relaxed">
+              Set long-term <span className="text-foreground font-semibold">Lakshyas</span>,
+              break them into daily <span className="text-foreground font-semibold">Kaams</span>,
+              and submit photo <span className="text-[#39ff14] font-semibold">Saboot</span>. An AI
+              Game Master reviews your work before awarding XP—and penalizes missed days with{' '}
+              <span className="text-[#dc143c] font-semibold">XP Debt</span>.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+              <Link
+                href="/register"
+                className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 font-bold uppercase tracking-wider px-7 py-3.5 text-base rounded-md transition-colors"
+              >
+                Create Your Khiladi
+                <ChevronRight className="w-5 h-5" />
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center border border-border bg-card hover:border-primary/60 text-foreground font-bold uppercase tracking-wider px-7 py-3.5 text-base rounded-md transition-colors"
+              >
+                Enter the Guild
+              </Link>
+            </div>
           </div>
 
-          {/* Headline */}
-          <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter mb-6 leading-tight">
-            Turn Your Goals Into{' '}
-            <span className="text-primary drop-shadow-[0_0_30px_rgba(255,215,0,0.5)]">
-              Adventures
-            </span>
-          </h1>
+          {/* Right: Interactive Verdict Preview */}
+          <div className="lg:col-span-6">
+            <div className="rounded-2xl bg-card border border-border p-5 sm:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border">
+                <div>
+                  <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+                    Interactive Example · Verdict Engine
+                  </p>
+                  <p className="text-sm font-semibold text-foreground mt-0.5">
+                    Test how the Game Master responds
+                  </p>
+                </div>
 
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-10">
-            KaamKaaj is the ultimate gamified productivity app. Set <span className="text-primary font-bold">Lakshyas</span>, 
-            complete <span className="text-success font-bold">Kaams</span>, earn <span className="text-primary font-bold">XP</span>, 
-            and become the <span className="text-chart-5 font-bold">Legend</span> you were meant to be.
-          </p>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/register" className="inline-flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 font-bold uppercase tracking-wider px-8 py-6 text-lg rounded-md">
-              Start Your Journey
-              <ChevronRight className="ml-2 w-5 h-5" />
-            </Link>
-            <Link href="/login" className="inline-flex items-center justify-center border border-primary text-primary hover:bg-primary/10 font-bold uppercase tracking-wider px-8 py-6 text-lg rounded-md">
-              Enter the Guild
-            </Link>
-          </div>
-
-          {/* Hero Visual */}
-          <div className="mt-20 relative">
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent z-10" />
-            <div className="relative mx-auto max-w-4xl">
-              <div className="relative rounded-3xl bg-card/50 backdrop-blur-xl border border-border p-8 md:p-12 shadow-2xl overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[60px] pointer-events-none" />
-                <div className="absolute bottom-0 left-0 w-64 h-64 bg-success/10 rounded-full blur-[60px] pointer-events-none" />
-                
-                <div className="relative z-10 grid md:grid-cols-3 gap-8">
-                  {/* Avatar Preview */}
-                  <div className="text-center">
-                    <div className="w-24 h-24 mx-auto rounded-full bg-secondary border-4 border-primary flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(255,215,0,0.4)]">
-                      <Users className="w-12 h-12 text-primary" />
-                    </div>
-                    <h3 className="text-xl font-black uppercase text-foreground">Shadow_Khiladi</h3>
-                    <p className="text-primary font-bold">Level 42</p>
-                  </div>
-
-                  {/* XP Bar */}
-                  <div className="md:col-span-2 space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Experience</span>
-                      <span className="text-primary font-black">12,450 / 15,000 XP</span>
-                    </div>
-                    <div className="h-4 bg-secondary rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-primary to-success rounded-full transition-all duration-1000" style={{ width: '83%' }} />
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Complete <span className="text-success font-bold">3 more Kaams</span> to level up!
-                    </p>
-                  </div>
+                <div
+                  role="tablist"
+                  aria-label="Example Kaam outcomes"
+                  className="inline-flex rounded-lg bg-secondary p-1 border border-border"
+                >
+                  {(Object.keys(VERDICT_SCENARIOS) as VerdictKey[]).map((key) => {
+                    const item = VERDICT_SCENARIOS[key];
+                    const isSelected = activeVerdict === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        role="tab"
+                        aria-selected={isSelected}
+                        onClick={() => setActiveVerdict(key)}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-colors ${
+                          isSelected
+                            ? 'bg-background text-foreground border border-border'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {item.tabLabel}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
+
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={scenario.key}
+                  initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={shouldReduceMotion ? undefined : { opacity: 0, y: -6 }}
+                  transition={{ duration: 0.18 }}
+                  className="pt-5 space-y-4"
+                >
+                  {/* Kaam Task Row */}
+                  <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-background border border-border">
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold text-foreground">{scenario.kaamTitle}</p>
+                      <p className="font-mono text-xs text-muted-foreground">{scenario.stakes}</p>
+                    </div>
+                    <span className="font-mono text-xs px-2.5 py-1 rounded-md bg-secondary text-muted-foreground border border-border shrink-0">
+                      {scenario.proofLabel}
+                    </span>
+                  </div>
+
+                  {/* Verdict Panel */}
+                  <div className={`p-4 rounded-xl border ${scenario.borderClass} ${scenario.bgTintClass}`}>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        {scenario.key === 'blessed' && (
+                          <CheckCircle2 className="w-4 h-4 text-[#39ff14]" />
+                        )}
+                        {scenario.key === 'rejected' && (
+                          <XCircle className="w-4 h-4 text-[#dc143c]" />
+                        )}
+                        {scenario.key === 'shadow' && (
+                          <Skull className="w-4 h-4 text-[#dc143c]" />
+                        )}
+                        <span className={`font-display text-base font-bold tracking-wider ${scenario.accentClass}`}>
+                          {scenario.verdictTitle}
+                        </span>
+                      </div>
+                      <span className={`font-mono text-xs font-bold ${scenario.accentClass}`}>
+                        {scenario.verdictCode}
+                      </span>
+                    </div>
+                    <p className="text-sm text-foreground/90 leading-relaxed">
+                      {scenario.feedback}
+                    </p>
+                  </div>
+
+                  {/* Outcome Metrics */}
+                  <div className="grid grid-cols-2 gap-3 tabular-nums">
+                    <div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        XP Impact
+                      </span>
+                      <span className={`font-mono text-sm font-bold ${scenario.accentClass}`}>
+                        {scenario.xpDelta}
+                      </span>
+                    </div>
+                    <div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Streak
+                      </span>
+                      <span className="font-mono text-sm font-bold text-foreground">
+                        {scenario.streakState}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Accountability Protocol Strip (Replaces Fake User Stats) */}
+      <section className="py-12 px-4 sm:px-6 bg-card/50 border-b border-border">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+          {PROTOCOL_PILLARS.map((pillar) => (
+            <div key={pillar.value} className="flex items-start gap-4">
+              <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
+                <pillar.icon className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-display text-2xl font-bold uppercase tracking-tight text-foreground">
+                  {pillar.value}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                  {pillar.label}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Core Loop */}
+      <section id="loop" className="py-20 md:py-24 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="max-w-2xl mb-14">
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold uppercase tracking-tight text-foreground">
+              The Accountability Loop
+            </h2>
+            <p className="text-lg text-muted-foreground mt-3">
+              Every quest follows four deliberate steps designed to turn intention into verifiable action.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {CORE_LOOP.map((step, index) => (
+              <div
+                key={step.title}
+                className="relative p-6 rounded-2xl bg-card border border-border flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="w-11 h-11 rounded-xl bg-secondary border border-border flex items-center justify-center">
+                      <step.icon className={`w-5 h-5 ${step.accent}`} />
+                    </div>
+                    {index < CORE_LOOP.length - 1 && (
+                      <ArrowRight className="hidden lg:block w-4 h-4 text-muted-foreground/50" />
+                    )}
+                  </div>
+                  <h3 className="font-display text-xl font-bold uppercase tracking-wide text-foreground mb-2">
+                    {step.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {step.description}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* AI Game Master Section */}
-      <section className="py-24 px-4 bg-gradient-to-b from-card/50 to-background relative overflow-hidden">
-        {/* Background geometric patterns - left side */}
-        <div className="absolute left-0 top-0 bottom-0 w-32 pointer-events-none">
-          {/* Crimson runic lines */}
-          <div className="absolute left-4 top-20 w-px h-32 bg-gradient-to-b from-[#dc143c] to-transparent shadow-[0_0_10px_#dc143c]" />
-          <div className="absolute left-8 top-32 w-px h-24 bg-gradient-to-b from-[#dc143c]/60 to-transparent shadow-[0_0_8px_#dc143c]" />
-          <div className="absolute left-4 bottom-32 w-16 h-px bg-[#dc143c] shadow-[0_0_10px_#dc143c]" />
-          <div className="absolute left-6 bottom-28 w-12 h-px bg-[#dc143c]/60" />
-          {/* Neon green runic lines */}
-          <div className="absolute left-2 top-40 w-20 h-px bg-[#39ff14] shadow-[0_0_10px_#39ff14]" />
-          <div className="absolute left-6 top-48 w-px h-20 bg-gradient-to-b from-[#39ff14] to-transparent shadow-[0_0_8px_#39ff14]" />
-          <div className="absolute left-4 bottom-20 w-24 h-px bg-[#39ff14] shadow-[0_0_12px_#39ff14]" />
-          <div className="absolute left-10 bottom-16 w-px h-16 bg-gradient-to-b from-[#39ff14]/60 to-transparent" />
-          {/* Circuit pattern accents */}
-          <svg className="absolute left-0 top-1/3 w-24 h-24 opacity-40" viewBox="0 0 100 100">
-            <path d="M10 50 L30 50 L40 30 L60 30 L70 50 L90 50" stroke="#dc143c" strokeWidth="2" fill="none" className="shadow-[0_0_5px_#dc143c]" />
-            <circle cx="10" cy="50" r="4" fill="#dc143c" className="shadow-[0_0_8px_#dc143c]" />
-            <circle cx="90" cy="50" r="4" fill="#dc143c" className="shadow-[0_0_8px_#dc143c]" />
-          </svg>
-          <svg className="absolute left-0 bottom-1/3 w-20 h-20 opacity-40" viewBox="0 0 100 100">
-            <path d="M10 50 L40 50 L50 70 L80 70" stroke="#39ff14" strokeWidth="2" fill="none" className="shadow-[0_0_5px_#39ff14]" />
-            <circle cx="10" cy="50" r="3" fill="#39ff14" className="shadow-[0_0_6px_#39ff14]" />
-            <circle cx="80" cy="70" r="3" fill="#39ff14" className="shadow-[0_0_6px_#39ff14]" />
-          </svg>
-        </div>
-        <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-chart-3/10 border border-chart-3/30 mb-6 shadow-[0_0_15px_rgba(139,92,246,0.2)]">
-                <Brain className="w-4 h-4 text-chart-3" />
-                <span className="text-sm font-medium text-chart-3">AI Accountability System</span>
+      <section id="game-master" className="py-20 md:py-24 px-4 sm:px-6 bg-card/40 border-y border-border">
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-12 gap-12 items-center">
+          <div className="lg:col-span-5 space-y-6">
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold uppercase tracking-tight text-foreground">
+              Your Personal <span className="text-primary">Game Master</span>
+            </h2>
+            <p className="text-lg text-muted-foreground leading-relaxed">
+              The Game Master doesn&apos;t just check a box. It knows your name, current streak,
+              and Shadow Realm history—and shifts its tone based on your consistency.
+            </p>
+
+            <div className="space-y-4 pt-2">
+              <div className="flex items-start gap-3.5">
+                <CheckCircle2 className="w-5 h-5 text-[#39ff14] shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-display text-base font-bold uppercase tracking-wider text-[#39ff14]">
+                    Blessed — XP Granted
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Your Saboot matches the Kaam criteria. XP is added and your streak advances.
+                  </p>
+                </div>
               </div>
-              <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter mb-4">
-                Your Personal <span className="text-chart-3">Game Master</span>
-              </h2>
-              <p className="text-xl text-[#E5E5E5] mb-8">
-                No more skipping tasks or half-hearted work. When you submit a Kaam, the <span className="text-chart-3 font-bold">AI Game Master</span> reviews it and decides:
-              </p>
-              <ul className="space-y-6">
-                <li className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full bg-[#121212] border-2 border-[#39ff14] flex items-center justify-center flex-shrink-0 mt-0 shadow-[0_0_20px_rgba(57,255,20,0.6)]">
-                    <Sparkles className="w-5 h-5 text-[#39ff14]" />
-                  </div>
-                  <div>
-                    <span className="font-black text-lg text-[#39ff14] tracking-wider drop-shadow-[0_0_8px_rgba(57,255,20,0.8)]">BLESSED</span>
-                    <p className="text-[#E5E5E5] text-sm mt-1">Your work is approved, XP is granted</p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full bg-[#121212] border-2 border-[#dc143c] flex items-center justify-center flex-shrink-0 mt-0 shadow-[0_0_20px_rgba(220,20,60,0.6)]">
-                    <MessageSquare className="w-5 h-5 text-[#dc143c]" />
-                  </div>
-                  <div>
-                    <span className="font-black text-lg text-[#dc143c] tracking-wider drop-shadow-[0_0_8px_rgba(220,20,60,0.8)]">REJECTED</span>
-                    <p className="text-[#E5E5E5] text-sm mt-1">Feedback provided, try again</p>
-                  </div>
-                </li>
-              </ul>
+
+              <div className="flex items-start gap-3.5">
+                <XCircle className="w-5 h-5 text-[#dc143c] shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-display text-base font-bold uppercase tracking-wider text-[#dc143c]">
+                    Rejected — Try Again
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Incomplete or mismatched proof is called out directly. No XP until you resubmit.
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="relative">
-              <div className="absolute inset-0 bg-chart-3/10 rounded-3xl blur-[60px]" />
-              <div className="relative bg-[#121212]/90 backdrop-blur-xl border border-[#27272a] rounded-2xl p-6 overflow-hidden">
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border">
-                  <div className="w-12 h-12 rounded-full bg-chart-3/20 flex items-center justify-center">
-                    <Brain className="w-6 h-6 text-chart-3" />
+          </div>
+
+          <div className="lg:col-span-7">
+            <div className="rounded-2xl bg-background border border-border p-6 space-y-4">
+              <div className="flex items-center justify-between pb-4 border-b border-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center">
+                    <Brain className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <p className="font-bold text-foreground">Game Master</p>
-                    <p className="text-sm text-[#A1A1AA]">AI Reviewer</p>
-                  </div>
-                  <div className="ml-auto">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full bg-[#39ff14]/20 text-[#39ff14] text-xs font-bold shadow-[0_0_10px_rgba(57,255,20,0.4)]">ONLINE</span>
+                    <p className="font-bold text-sm text-foreground">Game Master</p>
+                    <p className="font-mono text-xs text-muted-foreground">
+                      Illustrative Evaluation Log
+                    </p>
                   </div>
                 </div>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#39ff14]/10 border border-[#39ff14]/30 text-[#39ff14] font-mono text-xs font-bold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#39ff14]" />
+                  ACTIVE
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                <div className="p-4 rounded-xl bg-card border border-[#dc143c]/35">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <p className="font-mono text-xs font-bold text-[#dc143c] uppercase">
+                      Rejected · Daily Workout Log
+                    </p>
+                    <span className="font-mono text-xs text-muted-foreground">0 XP</span>
+                  </div>
+                  <p className="text-sm text-foreground/90 leading-relaxed">
+                    &ldquo;Your log shows 15 minutes of activity, but the Kaam requires 45. Be
+                    honest with yourself. Retry with accurate proof.&rdquo;
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-card border border-[#39ff14]/35">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <p className="font-mono text-xs font-bold text-[#39ff14] uppercase">
+                      Blessed · System Architecture Draft
+                    </p>
+                    <span className="font-mono text-xs text-[#39ff14] font-bold">+300 XP</span>
+                  </div>
+                  <p className="text-sm text-foreground/90 leading-relaxed">
+                    &ldquo;Clean diagrams, clear failure modes, and your 12-day streak stays intact.
+                    Keep pushing.&rdquo;
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stakes, Penalties & RPG Systems (Replaces Fake Testimonials) */}
+      <section id="stakes" className="py-20 md:py-24 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="max-w-2xl mb-14">
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold uppercase tracking-tight text-foreground">
+              Real Stakes. <span className="text-[#dc143c]">Real Consequences.</span>
+            </h2>
+            <p className="text-lg text-muted-foreground mt-3">
+              Standard productivity apps reward you for tapping a checkbox. KaamKaaj uses loss
+              aversion and verifiable proof so your progress actually means something.
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-12 gap-6">
+            {/* Left Comparison Panel */}
+            <div className="lg:col-span-5 rounded-2xl bg-card border border-border p-6 sm:p-8 flex flex-col justify-between">
+              <div className="space-y-6">
+                <div>
+                  <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                    Why checklists fail
+                  </p>
+                  <h3 className="font-display text-2xl font-bold uppercase text-foreground">
+                    Willpower vs. Proof
+                  </h3>
+                </div>
+
                 <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-[#121212] border border-[#27272a] shadow-[0_0_20px_rgba(220,20,60,0.15)]">
-                    <p className="text-sm font-bold text-[#dc143c] mb-2">✖ REJECTED: Daily Workout Log</p>
-                    <p className="text-sm text-[#E5E5E5]">
-                      Your log shows only 15 minutes of activity but claims 45. Be honest, Khiladi. The Game Master sees all. Retry with accurate data.
+                  <div className="p-4 rounded-xl bg-background border border-border">
+                    <p className="text-xs font-mono uppercase text-muted-foreground mb-1">
+                      Traditional To-Do Apps
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Tap &ldquo;Done&rdquo; even when you skipped the work. Postpone indefinitely
+                      with zero penalty.
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl bg-[#121212] border border-[#27272a] shadow-[0_0_20px_rgba(57,255,20,0.15)]">
-                    <p className="text-sm font-bold text-[#39ff14] mb-2">★ BLESSED: Project Alpha Code</p>
-                    <p className="text-sm text-[#E5E5E5]">
-                      Clean code, proper documentation, all tests passing. +500 XP awarded. You&apos;re on your way to Senior Developer, Khiladi!
+
+                  <div className="p-4 rounded-xl bg-background border border-primary/40">
+                    <p className="text-xs font-mono uppercase text-primary mb-1">
+                      KaamKaaj Protocol
+                    </p>
+                    <p className="text-sm text-foreground">
+                      Upload photo Saboot for high-stakes Kaams. The Reaper flags missed deadlines,
+                      and full-day misses trigger XP Debt.
                     </p>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Right 4 Core Mechanics */}
+            <div className="lg:col-span-7 grid sm:grid-cols-2 gap-6">
+              <div className="p-6 rounded-2xl bg-card border border-border space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-[#dc143c]/10 border border-[#dc143c]/30 flex items-center justify-center">
+                  <Skull className="w-5 h-5 text-[#dc143c]" />
+                </div>
+                <h3 className="font-display text-xl font-bold uppercase text-foreground">
+                  The Shadow Realm
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Miss a full day and your XP plunges into negative debt. Only verified Kaams
+                  bring you back into good standing.
+                </p>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-card border border-border space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center">
+                  <Flame className="w-5 h-5 text-orange-500" />
+                </div>
+                <h3 className="font-display text-xl font-bold uppercase text-foreground">
+                  Streaks &amp; Freezes
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Complete tasks daily to build your streak. Keep limited Streak Freezes as
+                  emergency shields for unavoidable off-days.
+                </p>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-card border border-border space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center">
+                  <Lock className="w-5 h-5 text-primary" />
+                </div>
+                <h3 className="font-display text-xl font-bold uppercase text-foreground">
+                  You Set the Stakes
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Assign 10 XP to simple chores or 500 XP to deep work—and toggle Saboot
+                  verification for the tasks that matter most.
+                </p>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-card border border-border space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-secondary border border-border flex items-center justify-center">
+                  <Users className="w-5 h-5 text-foreground" />
+                </div>
+                <h3 className="font-display text-xl font-bold uppercase text-foreground">
+                  Clans &amp; Guilds
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Team up with peers who hold the same standard. Track shared momentum without
+                  hiding behind fake numbers.
+                </p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 px-4 bg-card/30 border-y border-border">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-                  <stat.icon className="w-8 h-8 text-primary" />
-                </div>
-                <p className="text-4xl md:text-5xl font-black text-primary mb-2">{stat.value}</p>
-                <p className="text-lg text-muted-foreground font-medium">{stat.label}</p>
-              </div>
-            ))}
+      {/* Final CTA */}
+      <section className="py-20 px-4 sm:px-6 border-t border-border bg-card/30">
+        <div className="max-w-4xl mx-auto rounded-2xl bg-card border border-primary/35 p-8 sm:p-12 text-center space-y-6">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto">
+            <Shield className="w-6 h-6 text-primary" />
           </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-24 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter mb-4">
-              Your Quest Begins <span className="text-primary">Now</span>
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Everything you need to transform your productivity into an epic adventure
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {features.map((feature, index) => (
-              <Card 
-                key={index} 
-                className="group bg-card/50 backdrop-blur-md border-border hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_30px_rgba(255,215,0,0.1)]"
-              >
-                <CardContent className="p-8">
-                  <div className="flex items-start gap-6">
-                    <div className={`flex-shrink-0 w-14 h-14 rounded-2xl bg-card border border-border flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                      <feature.icon className={`w-7 h-7 ${feature.color}`} />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold uppercase tracking-wider mb-2">{feature.title}</h3>
-                      <p className="text-muted-foreground">{feature.description}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="py-24 px-4 bg-card/30 border-y border-border">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter mb-4">
-              How It <span className="text-success">Works</span>
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Three simple steps to start your transformation
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { step: '01', title: 'Create Your Khiladi', description: 'Sign up and build your avatar. Choose your username and start your journey.' },
-              { step: '02', title: 'Set Your Lakshyas', description: 'Define big goals that excite you. Break them into achievable Kaams (tasks).' },
-              { step: '03', title: 'Complete & Level Up', description: 'Finish tasks to earn XP, unlock achievements, and become a Legend!' }
-            ].map((item, index) => (
-              <div key={index} className="relative">
-                <div className="text-8xl font-black text-primary/10 absolute -top-4 -left-2">{item.step}</div>
-                <div className="relative pt-12">
-                  <h3 className="text-xl font-bold uppercase tracking-wider mb-4">{item.title}</h3>
-                  <p className="text-muted-foreground">{item.description}</p>
-                </div>
-                {index < 2 && (
-                  <div className="hidden md:block absolute top-1/2 -right-4 transform -translate-y-1/2">
-                    <ChevronRight className="w-8 h-8 text-primary/30" />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-24 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter mb-4">
-              Stories from <span className="text-chart-5">Khiladis</span>
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Real people, real transformations
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index} className="bg-card/50 backdrop-blur-md border-border">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-primary text-primary" />
-                    ))}
-                  </div>
-                  <p className="text-foreground mb-6 italic">&ldquo;{testimonial.quote}&rdquo;</p>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-primary">{testimonial.name}</p>
-                      <p className="text-sm text-muted-foreground">{testimonial.level}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Achievement</p>
-                      <p className="text-sm font-medium text-success">{testimonial.achievement}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-24 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="relative rounded-3xl bg-gradient-to-br from-card to-card/50 border border-primary/30 p-12 text-center overflow-hidden">
-            <div className="absolute top-0 left-0 w-64 h-64 bg-primary/20 rounded-full blur-[80px] pointer-events-none" />
-            <div className="absolute bottom-0 right-0 w-64 h-64 bg-success/20 rounded-full blur-[80px] pointer-events-none" />
-            
-            <div className="relative z-10">
-              <Crown className="w-16 h-16 text-primary mx-auto mb-6" />
-              <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter mb-4">
-                Ready to <span className="text-primary">Level Up</span>?
-              </h2>
-              <p className="text-xl text-muted-foreground mb-8 max-w-xl mx-auto">
-                Join thousands of Khiladis who have transformed their productivity into an epic adventure.
-              </p>
-              <Link href="/register" className="inline-flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 font-bold uppercase tracking-wider px-10 py-6 text-xl rounded-md">
-                  Begin Your Quest
-                  <ChevronRight className="ml-2 w-6 h-6" />
-                </Link>
-            </div>
+          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold uppercase tracking-tight text-foreground">
+            Ready to put proof behind your goals?
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+            Create your Khiladi profile, forge your first Lakshya, and let the Game Master judge
+            the work.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <Link
+              href="/register"
+              className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 font-bold uppercase tracking-wider px-8 py-4 text-base rounded-md transition-colors w-full sm:w-auto"
+            >
+              Begin Your Quest
+              <ChevronRight className="w-5 h-5" />
+            </Link>
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center border border-border bg-background hover:border-primary/60 text-foreground font-bold uppercase tracking-wider px-8 py-4 text-base rounded-md transition-colors w-full sm:w-auto"
+            >
+              Login
+            </Link>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-4 border-t border-border">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <footer className="py-8 px-4 sm:px-6 border-t border-border">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Target className="w-6 h-6 text-primary" />
-            <span className="text-lg font-black uppercase tracking-wider">KaamKaaj</span>
+            <Target className="w-5 h-5 text-primary" />
+            <span className="font-display text-base font-bold uppercase tracking-wider">
+              KaamKaaj
+            </span>
           </div>
           <p className="text-sm text-muted-foreground">
-            &copy; 2026 KaamKaaj. Turn work into adventure.
+            &copy; 2026 KaamKaaj. Accountability through proof.
           </p>
-          <div className="flex items-center gap-4">
-            <Link href="/login" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+          <div className="flex items-center gap-5 text-sm text-muted-foreground">
+            <Link href="/login" className="hover:text-primary transition-colors">
               Login
             </Link>
-            <Link href="/register" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+            <Link href="/register" className="hover:text-primary transition-colors">
               Register
             </Link>
           </div>
