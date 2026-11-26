@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server';
 // Define public routes that don't require authentication
 const publicRoutes = ['/', '/login', '/register', '/verify-otp'];
 
-export function proxy(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Check if it's a public route
@@ -28,6 +28,6 @@ export function proxy(request: NextRequest) {
 export const config = {
   // Protect all routes, but exclude static files, _next, etc.
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|manifest.json|icons).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|icon.png|manifest.json|icons|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|webmanifest)$).*)',
   ],
 };
