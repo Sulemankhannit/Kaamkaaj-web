@@ -24,8 +24,12 @@ export const metadata: Metadata = {
   description: "To-do lists rely on willpower. KaamKaaj relies on photographic proof, an AI Game Master, and real XP stakes.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/icon.png",
-    apple: "/icon.png",
+    icon: [
+      { url: "/icon.png?v=2", type: "image/png" },
+      { url: "/favicon.ico?v=2" },
+    ],
+    shortcut: "/favicon.ico?v=2",
+    apple: "/icon.png?v=2",
   },
 };
 
