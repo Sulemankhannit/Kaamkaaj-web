@@ -23,6 +23,10 @@ export const metadata: Metadata = {
   title: "KaamKaaj | The Accountability RPG",
   description: "To-do lists rely on willpower. KaamKaaj relies on photographic proof, an AI Game Master, and real XP stakes.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({

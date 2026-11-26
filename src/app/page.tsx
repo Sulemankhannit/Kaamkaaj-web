@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   Target,
@@ -149,9 +150,14 @@ export default function LandingPage() {
       <header className="sticky top-0 z-40 border-b border-border/80 bg-background/90 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/40 flex items-center justify-center">
-              <Target className="w-4 h-4 text-primary" />
-            </div>
+            <Image
+              src="/icon.png"
+              alt="KaamKaaj logo"
+              width={36}
+              height={36}
+              className="rounded-lg border border-primary/30"
+              priority
+            />
             <span className="font-display text-xl font-bold uppercase tracking-wider text-foreground">
               KaamKaaj
             </span>
@@ -629,8 +635,14 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="py-8 px-4 sm:px-6 border-t border-border">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Target className="w-5 h-5 text-primary" />
+          <div className="flex items-center gap-2.5">
+            <Image
+              src="/icon.png"
+              alt="KaamKaaj logo"
+              width={28}
+              height={28}
+              className="rounded-md border border-primary/30"
+            />
             <span className="font-display text-base font-bold uppercase tracking-wider">
               KaamKaaj
             </span>
